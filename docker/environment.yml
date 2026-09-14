@@ -1,0 +1,26 @@
+name: draem
+channels:
+  - conda-forge
+  - defaults
+  - pytorch
+dependencies:
+  - python=3.10
+  - pip
+  - numpy
+  - pandas
+  - scikit-learn
+  - tqdm
+  - torchvision
+  - pytorch
+  - pip:
+      - opencv-python
+      - torch
+      - torchvision
+      - torchaudio
+      - imgaug
+      - requests
+      - segment-anything
+      - debugpy
+      - pillow
+      - scipy
+      - matplotlib
