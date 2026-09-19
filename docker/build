@@ -1,18 +1,20 @@
 #!/bin/bash
 
-set -e
+set -euo pipefail
 
-if [[ -n "${DRAEM_DEBUG}" ]]; then
+if [[ -n "${DRAEM_DEBUG:-}" ]]; then
     set -x
 fi
 
-source $(dirname "$0")/env
+# Build context is always the repository root, whatever directory the caller is in.
+cd "$(dirname "$0")/.."
+
+source docker/env
 
 function usage() {
-
     echo -n \
         "Usage: $(basename "$0")
-Build Draem container. Must be run from the repository root
+Build the DRAEM container.
 
 Options:
 --no-cache  Do not use cache when building the images
@@ -20,46 +22,38 @@ Options:
 "
 }
 
+BUILD_ARGS=()
+
 while [[ $# -gt 0 ]]
 do
-    key="$1"
-    case $key in
+    case "$1" in
         --help)
         usage
         exit 0
-        shift
         ;;
 
         --no-cache)
-        NO_CACHE="--no-cache"
+        BUILD_ARGS+=(--no-cache)
         shift
         ;;
 
         --pull)
-        PULL="--pull"
+        BUILD_ARGS+=(--pull)
         shift
+        ;;
+
+        *)
+        echo "Unknown option: $1" >&2
+        usage
+        exit 1
         ;;
     esac
 done
 
 if [ "${BASH_SOURCE[0]}" = "${0}" ]; then
-    if [ "${1:-}" = "--help" ]; then
-        usage
-    else
-        docker build $PULL $NO_CACHE --target dev -t draem_image:local -f docker/DOCKERFILE .
-    fi
-
-    # Wipe out the debug container if it still exists. It is now obsolete.
-    if [ "$(docker ps -aqf name=$DOCKER_CONTAINER_NAME)" ]; then
-        # Container exists
-        if [ "$(docker ps -qf name=$DOCKER_CONTAINER_NAME)" ]; then
-            # Container is running
-            echo "Kill debug container"
-            docker kill $DOCKER_DEBUG_NAME
-        fi
-        echo "Remove debug container"
-        docker rm -f $DOCKER_DEBUG_NAME
-    fi
+    docker build "${BUILD_ARGS[@]}" \
+        --target dev \
+        -t "$DOCKER_IMAGE_NAME" \
+        -f docker/Dockerfile \
+        .
 fi
-
-

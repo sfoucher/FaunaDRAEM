@@ -1,0 +1,19 @@
+# torch / torchvision are provided by the base image - do not add them here.
+numpy<2                 # imgaug 0.4.0 (unmaintained) breaks on numpy >= 1.24
+opencv-python-headless  # headless: no libgl1/libglib2.0-0 needed in the image
+scikit-image
+scikit-learn
+scipy
+pandas
+matplotlib
+tqdm
+requests
+nflows
+segment-anything @ git+https://github.com/facebookresearch/segment-anything.git
+
+# imgaug 0.4.0 deps, declared here because it is installed with --no-deps (see Dockerfile):
+# its install_requires pulls the GL-linked opencv-python, which would shadow the headless build.
+six
+imageio
+Shapely
+Pillow

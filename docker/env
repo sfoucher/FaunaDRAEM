@@ -1,3 +1,2 @@
 DOCKER_CONTAINER_NAME=draem_container
 DOCKER_IMAGE_NAME=draem_image:local
-PROJECT_DIR=/home/serg3401/DEV/DRAEM

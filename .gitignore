@@ -1,0 +1,9 @@
+__pycache__/
+*.py[cod]
+
+# SAM checkpoint and any trained weights
+*.pt
+*.pth
+
+# Local data and results
+DATASETS/

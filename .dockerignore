@@ -1,0 +1,11 @@
+.git
+.gitattributes
+__pycache__
+*.pyc
+*.pyo
+.DS_Store
+
+# Data and artifacts live on bind mounts, never in the image.
+DATASETS/
+*.pt
+*.pth
