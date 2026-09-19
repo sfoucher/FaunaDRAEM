@@ -1,27 +1,79 @@
 #!/bin/bash
+#
+# Start a shell, or run a command, in the FaunaDRAEM container.
+#
+#   ./docker/run                  interactive shell in /DRAEM
+#   ./docker/run python main.py   run the pipeline directly
+#
+# Build the image first with ./docker/build. The repository is mounted over the image's own copy of
+# the code, so host edits are live. Datasets default to ./DATASETS; point DATASETS_DIR somewhere
+# else if your data lives outside the repo:
+#
+#   DATASETS_DIR=/mnt/data/caribou ./docker/run
+#
+# The container runs as the calling user so that heatmaps, checkpoints and reports written into the
+# mounts are not root-owned. That uid has no entry in the image's /etc/passwd, hence HOME=/tmp -
+# without it matplotlib cannot find a home directory for its font cache. The trade-off is that
+# `pip install` inside the container fails; start a root container for that:
+#
+#   docker run --rm -it --user root -v "$PWD":/DRAEM draem_image:local bash
+#
+# --ipc=host gives the DataLoader workers enough shared memory (--shm-size=8g is the narrower
+# option, at the cost of a fixed ceiling).
 
-set -e  # Exit immediately if a command exits with a non-zero status
+set -euo pipefail
 
-if [[ -n "${DRAEM_DEBUG}" ]]; then
+if [[ -n "${DRAEM_DEBUG:-}" ]]; then
     set -x
 fi
 
-# Load environment variables
-source "$(dirname "$0")/env"
+cd "$(dirname "$0")/.."
 
-# Function to show usage instructions
+source docker/env
+
 function usage() {
     echo -n \
-        "Usage: $(basename "$0")\n
-Run a console in a docker container with all prerequisites installed.\n"
+        "Usage: $(basename "$0") [COMMAND...]
+Run a console, or COMMAND, in the $DOCKER_IMAGE_NAME container.
+
+The repository is mounted at /DRAEM and \$DATASETS_DIR at /DRAEM/DATASETS.
+
+Environment:
+DATASETS_DIR  Host dataset directory (default: ./DATASETS)
+DRAEM_DEBUG   Set to trace the script
+"
 }
 
+if [ "${1:-}" = "--help" ]; then
+    usage
+    exit 0
+fi
+
+DATASETS_DIR="${DATASETS_DIR:-$PWD/DATASETS}"
+
+# Docker would silently create a missing bind-mount source and hand the container an empty
+# directory, so check here instead of debugging a mysteriously empty /DRAEM/DATASETS later.
+if [ ! -d "$DATASETS_DIR" ]; then
+    echo "Datasets directory not found: $DATASETS_DIR" >&2
+    echo "Create it, or set DATASETS_DIR=/path/to/datasets" >&2
+    exit 1
+fi
+
+# -t only when there is a terminal, so `./docker/run python main.py` also works from a script,
+# a cron job or nohup, where docker would otherwise refuse with "the input device is not a TTY".
+TTY_FLAGS=(-i)
+if [ -t 0 ]; then
+    TTY_FLAGS+=(-t)
+fi
+
 if [ "${BASH_SOURCE[0]}" = "${0}" ]; then
-    docker run --rm -it --gpus all \
+    docker run --rm "${TTY_FLAGS[@]}" \
+        --gpus all \
         --ipc=host \
-        -v /home/serg3401/DEV/DRAEM/DATASETS:/DRAEM/DATASETS \
-        -v /home/serg3401/DEV/DRAEM:/DRAEM \
-        -p 8888:8888 \
-        --entrypoint /bin/bash \
-        draem_image:local
+        --user "$(id -u):$(id -g)" \
+        -e HOME=/tmp \
+        -v "$PWD":/DRAEM \
+        -v "$DATASETS_DIR":/DRAEM/DATASETS \
+        "$DOCKER_IMAGE_NAME" \
+        "$@"
 fi

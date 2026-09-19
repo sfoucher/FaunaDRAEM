@@ -1,4 +1,27 @@
 #!/bin/bash
+#
+# Build the FaunaDRAEM container image.
+#
+#   ./docker/build              build (or rebuild) the image
+#   ./docker/build --pull       refresh the pytorch base image first
+#   ./docker/build --no-cache   rebuild every layer from scratch
+#
+# Can be called from any directory: it cd's to the repository root, which is the build context the
+# Dockerfile expects (it does COPY . /DRAEM/). The image is tagged $DOCKER_IMAGE_NAME from
+# docker/env - change the tag there, not here.
+#
+# Needs: docker, network access (pulls a ~10 GB base image and installs pip deps), and the NVIDIA
+# Container Toolkit if you then want --gpus all to work. A GPU is NOT needed to build.
+#
+# The last two layers are smoke tests - they import every third-party dependency and then every
+# FaunaDRAEM module, so a missing or broken dependency fails the build instead of the first
+# training run. A build that ends in "FaunaDRAEM imports ok" is a working image.
+#
+# Then start a container, mounting the repo and your datasets over the image's copy:
+#   docker run --rm -it --gpus all --ipc=host \
+#     -v "$PWD":/DRAEM -v /path/to/datasets:/DRAEM/DATASETS draem_image:local bash
+# Add --user "$(id -u):$(id -g)" if you do not want the outputs written to the mount owned by root.
+# (docker/run does roughly this, but its mount paths are hardcoded to another machine.)
 
 set -euo pipefail
 
@@ -13,12 +36,17 @@ source docker/env
 
 function usage() {
     echo -n \
-        "Usage: $(basename "$0")
-Build the DRAEM container.
+        "Usage: $(basename "$0") [--no-cache] [--pull]
+Build the FaunaDRAEM container image, tagged $DOCKER_IMAGE_NAME.
+Runs from any directory; the build context is the repository root.
 
 Options:
 --no-cache  Do not use cache when building the images
 --pull      Attempt to pull upstream images before building
+
+Then:
+  docker run --rm -it --gpus all --ipc=host \\
+    -v \"\$PWD\":/DRAEM -v /path/to/datasets:/DRAEM/DATASETS $DOCKER_IMAGE_NAME bash
 "
 }
 

@@ -1,3 +1,16 @@
+# FaunaDRAEM container: CUDA-enabled PyTorch + the repo's Python dependencies.
+#
+#   Build:  ./docker/build                  (from anywhere in the repo)
+#   Run:    docker run --rm -it --gpus all --ipc=host \
+#             -v "$PWD":/DRAEM -v /path/to/datasets:/DRAEM/DATASETS draem_image:local bash
+#
+# The image already contains a copy of the code, but the usual workflow bind-mounts the repo over
+# /DRAEM so host edits are live. Data and the SAM checkpoint stay on the mounts, never in the image.
+# Everything below assumes the container working dir /DRAEM, which is what main.py's absolute paths
+# expect. Requires the NVIDIA Container Toolkit on the host; ~10 GB of disk for the image.
+#
+# The three ARGs below are overridable at build time, e.g. to stay on CUDA 12.8:
+#   docker build --build-arg PYTORCH=2.11.0 --build-arg CUDA=12.8 -f docker/Dockerfile .
 # Arch list must cover the deploy GPUs; sm_120 (Blackwell) needs CUDA >= 12.8, or the image will
 # load fine and then fail every kernel launch with cudaErrorNoKernelImageForDevice.
 # Valid pairs on Docker Hub: 2.13.0 ships cuda12.6/13.0/13.2, cuda12.8 stops at torch 2.11.0.
@@ -49,4 +62,6 @@ Padim.MAF, Padim.padim_adapter, Padim.padim_nf_adapter; \
 print('FaunaDRAEM imports ok')"
 # RUN python -c "import evaluate, main; print('evaluate/main ok')"
 
+# No entrypoint script: the container drops into a shell. Inside it, `python main.py` runs the full
+# SAM -> train -> evaluate pipeline (edit build_args() in main.py to point at your data first).
 CMD ["/bin/bash"]
