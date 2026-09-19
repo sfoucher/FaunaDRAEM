@@ -107,4 +107,3 @@ Python dependencies are in `docker/requirements.txt`. **torch and torchvision ar
 | `build` | Build wrapper, sets the context and tag |
 | `run` | Container wrapper: mounts, user mapping, `DATASETS_DIR` |
 | `env` | Shared image and container names |
-| `environment.yml` | Dead: leftover from the conda-based image, nothing reads it |
