@@ -16,10 +16,10 @@ Everything assumes the container working dir `/DRAEM` (paths in `main.py` are ab
 # Build (context is the repo root; ./docker/build does the same with --no-cache/--pull flags)
 docker build -t draem_image:local -f docker/Dockerfile .
 
-# Shell in container (adapt the -v mounts; docker/run hardcodes another user's home)
-docker run --rm -it --gpus all --ipc=host \
-  -v /path/to/FaunaDRAEM:/DRAEM -v /path/to/datasets:/DRAEM/DATASETS \
-  draem_image:local bash
+# Shell in container, or run a command in it (datasets default to ./DATASETS)
+./docker/run
+./docker/run python main.py
+DATASETS_DIR=/mnt/data/caribou ./docker/run
 
 # Full pipeline: SAM download → SAM masks → DRAEM train → test + PDF report
 python main.py
@@ -90,7 +90,7 @@ Early stopping monitors `args.early_stop_metric` on segmentation only, starting 
 - **`evaluate.py:21` imports `threshold_tunning`, which is not in the repo** — so `import evaluate` (and therefore `python main.py`) fails at import time. Only `apply_calibration` is needed, and only in the PaDiM-NF branch (`evaluate.py:300`).
 - `train()` raises if CUDA is unavailable, and `batch_size` is rounded up to a multiple of the GPU count.
 - Python deps are `docker/requirements.txt`; torch/torchvision come from the base image (`pytorch/pytorch:${PYTORCH}-cuda${CUDA}-cudnn${CUDNN}-runtime`, pinned by the `ARG`s at the top of the Dockerfile) — adding them to requirements would clobber the CUDA build. `numpy<2` is pinned because `imgaug` (hard-imported by `train_dataset.py`, even with `apply_augmentations=False`) breaks on newer numpy, and `imgaug` is installed `--no-deps` in a second pip command because its `install_requires` pulls the GL-linked `opencv-python`, which shadows `opencv-python-headless` and makes `import cv2` die on `libGL.so.1`. Its real deps are listed in `requirements.txt` instead. `docker/environment.yml` is dead — nothing reads it since the conda path was dropped.
-- `docker/run` still hardcodes `/home/serg3401/DEV/DRAEM` for both `-v` mounts, and mounts the repo over `/DRAEM`, shadowing the image's `COPY`. Runs as root, so anything it writes into the mount is root-owned (`--user $(id -u):$(id -g)` fixes that).
+- `docker/run` mounts the repo over `/DRAEM`, shadowing the image's own `COPY` — host edits are live, and the image's copy is only what you get without the mount. It runs as the calling user with `HOME=/tmp` so results are not root-owned, which also means `pip install` inside the container fails; use `docker run --user root` for that. See `docker/README.md`.
 - `post_processing.py` and `Extract_silhouet_boxes_from_masks.py` take no arguments — their inputs are module-level constants / bottom-of-file assignments pointing at absolute paths from the authors' machine.
 - `utils.mask_exists` returns False for anything but `.jpg`; `TestDataset` compensates with a same-extension fallback, so a patch whose mask is missing is silently labeled *normal*.
 - Style is heavily line-broken (one argument per line) and several files re-import the same modules mid-file. Match the surrounding style rather than reformatting.
