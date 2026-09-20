@@ -94,7 +94,6 @@ Python dependencies are in `docker/requirements.txt`. **torch and torchvision ar
 | --- | --- |
 | `manifest unknown` on the `FROM` line | `PYTORCH`/`CUDA` are a pair Docker Hub does not publish (see above) |
 | `ImportError: libGL.so.1` from `import cv2` | Something pulled in `opencv-python` alongside `opencv-python-headless`. `imgaug` does this, which is why the Dockerfile installs it with `--no-deps` and lists its real dependencies in `requirements.txt` |
-| `ModuleNotFoundError: threshold_tunning` | Known: `evaluate.py:21` imports a module that is not in the repo, so `import evaluate` and `python main.py` fail. The Dockerfile's second smoke test leaves `evaluate`/`main` commented out for this reason — uncomment once the module lands |
 | numpy errors from `imgaug` | `imgaug` 0.4.0 is unmaintained and breaks on numpy >= 1.24, hence the `numpy<2` pin |
 | `could not select device driver` | NVIDIA Container Toolkit missing or not configured on the host |
 

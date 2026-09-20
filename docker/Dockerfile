@@ -54,13 +54,10 @@ print('deps ok | torch', torch.__version__, '| cuda', torch.version.cuda, '| num
 # Smoke test 2: the repo's own modules must import against those deps.
 # Extract_silhouet_boxes_from_masks is excluded on purpose - it has no __main__ guard and
 # runs extraction on absolute host paths at import time.
-# evaluate (and main, which imports it) are commented out until threshold_tunning.py lands in the
-# repo - evaluate.py:21 imports it and it does not exist, so they would fail this layer every time.
 RUN python -c "import model, loss, metrics, utils, train, train_dataset, test_dataset, \
-generate_masks_sam, load_sam, infer_Draem, post_processing, \
+generate_masks_sam, load_sam, infer_Draem, post_processing, threshold_tunning, evaluate, main, \
 Padim.MAF, Padim.padim_adapter, Padim.padim_nf_adapter; \
 print('FaunaDRAEM imports ok')"
-# RUN python -c "import evaluate, main; print('evaluate/main ok')"
 
 # No entrypoint script: the container drops into a shell. Inside it, `python main.py` runs the full
 # SAM -> train -> evaluate pipeline (edit build_args() in main.py to point at your data first).
